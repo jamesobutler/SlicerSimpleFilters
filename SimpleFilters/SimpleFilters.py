@@ -766,6 +766,8 @@ class FilterParameters(object):
         # This member name is use for direction cosine matrix for image sources.
         # We are going to ignore it
         pass
+      elif "std::vector" in t:
+        self.createVectorWidget(member["name"],t)
       elif t == "InterpolatorEnum":
         labels=["Nearest Neighbor",
                 "Linear",
@@ -919,7 +921,7 @@ class FilterParameters(object):
     return w
 
   def createVectorWidget(self,name,type):
-    m = re.search(r"<([a-zA-Z ]+)>", type)
+    m = re.search(r"<([a-zA-Z0-9_ ]+)>", type)
     if m:
       type = m.group(1)
 
@@ -936,6 +938,37 @@ class FilterParameters(object):
       w.minimum=0
       w.maximum=1
       w.connect("coordinatesChanged(double*)", lambda val,widget=w,name=name:self.onBoolVectorChanged(name,widget,val))
+    elif type in ["uint8_t", "int8_t",
+               "uint16_t", "int16_t",
+               "uint32_t", "int32_t",
+               "uint64_t", "int64_t",
+               "unsigned int", "int"]:
+      w.setDecimals(0)
+      if type=="uint8_t":
+        w.minimum=0
+        w.maximum=255
+      elif type=="int8_t":
+        w.minimum=-128
+        w.maximum=127
+      elif type=="uint16_t":
+        w.minimum=0
+        w.maximum=65535
+      elif type=="int16_t":
+        w.minimum=-32678
+        w.maximum=32767
+      elif type=="uint32_t":
+        w.minimum=0
+        w.maximum=4294967295
+      elif type=="int32_t":
+        w.minimum=-2147483648
+        w.maximum=2147483647
+      elif type=="uint64_t" or type=="unsigned int":
+        w.minimum=-0
+        w.maximum=18446744073709551615
+      elif type=="int64_t" or type=="int":
+        w.minimum=-9223372036854775808
+        w.maximum=9223372036854775807
+      w.connect("coordinatesChanged(double*)", lambda val,widget=w,name=name:self.onIntVectorChanged(name,widget,val))
     else:
       w.setDecimals(0)
       w.connect("coordinatesChanged(double*)", lambda val,widget=w,name=name:self.onIntVectorChanged(name,widget,val))
@@ -947,7 +980,8 @@ class FilterParameters(object):
 
   def createIntWidget(self,name,type="int"):
 
-    w = qt.QSpinBox()
+    w = qt.QDoubleSpinBox()
+    w.setDecimals(0)
     self.widgets.append(w)
 
     if type=="uint8_t":
@@ -958,10 +992,14 @@ class FilterParameters(object):
       w.setRange(0,65535)
     elif type=="int16_t":
       w.setRange(-32678,32767)
-    elif type=="uint32_t" or  type=="uint64_t" or type=="unsigned int":
-      w.setRange(0,2147483647)
-    elif type=="int32_t" or  type=="uint64_t" or type=="int":
+    elif type=="uint32_t" or type=="uint64_t" or type=="unsigned int":
+      w.setRange(0,4294967295)
+    elif type=="int32_t" or type=="int64_t" or type=="int":
       w.setRange(-2147483648,2147483647)
+    # elif type=="uint64_t" or type=="unsigned int":
+    #   w.setRange(0,18446744073709551615)
+    # elif type=="int64_t" or type=="int":
+    #   w.setRange(-9223372036854775808,9223372036854775807)
 
     w.setValue(int(self._getParameterValue(name)))
     w.connect("valueChanged(int)", lambda val,name=name:self.onScalarChanged(name,val))
